@@ -1,0 +1,18 @@
+/* Platzhalter für projektspezifische jsPsych-Anpassungen. */
+
+/* SurveyJS navigation buttons */
+.sd-body__navigation .sd-btn,
+.sd-navigation__next-btn,
+.sd-navigation__prev-btn,
+.sd-navigation__complete-btn,
+.jspsych-nav-complete {
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  padding: 6px 12px !important;
+  min-height: 32px !important;
+}
+
+/* Hide required asterisk/text */
+.sd-question__required-text {
+  display: none !important;
+}

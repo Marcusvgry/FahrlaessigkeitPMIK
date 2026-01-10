@@ -1,0 +1,17 @@
+.instructions {
+  max-width: 800px;
+  margin: 0 auto;
+  font-size: 18px;
+  line-height: 1.6;
+  text-align: justify;
+}
+
+.instructions ul {
+  margin-left: 2em;
+  padding-left: 1em;
+  list-style-type: disc;
+}
+
+.instructions p {
+  margin-bottom: 1em;
+}
