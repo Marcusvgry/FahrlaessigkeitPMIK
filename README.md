@@ -1,9 +1,3 @@
-# Fahrlaessigkeits-Urteile (jsPsych)
-
-Minimal jsPsych experiment with Vite and an optional Express data endpoint.
-
-## Development
-
 npm install
 npm run dev
 
@@ -11,10 +5,7 @@ npm run dev
 
 npm run build
 
-## Run server (data endpoint)
+## Run server 
 
 npm run start
 
-## Data endpoint
-
-POST /experiment-data accepts text/csv and writes files to ./data.
