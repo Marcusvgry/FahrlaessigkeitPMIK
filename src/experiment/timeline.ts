@@ -32,7 +32,11 @@ export function buildTimeline(_jsPsych: JsPsych): Timeline {
   // Function to check if pilot study was selected (button index 1)
   const isPilotStudy = () => {
     if (!devMode) return false;
-    const selectorData = _jsPsych.data.get().filter({ block: "dev_mode_selector" }).last(1).values()[0];
+    const selectorData = _jsPsych.data
+      .get()
+      .filter({ block: "dev_mode_selector" })
+      .last(1)
+      .values()[0];
     return selectorData?.response === 1; // "Pilotstudie" is index 1
   };
 

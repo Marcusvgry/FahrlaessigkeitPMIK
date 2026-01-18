@@ -272,9 +272,12 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
 
     // Pilot study: Only show slider + justification (no Likert questions)
     if (pilotStudy) {
-      // Use window to store values - ensures they persist after DOM is removed
-      const sliderKey = `slider_value_${item.vignette.id}`;
-      const justificationKey = `justification_${item.vignette.id}`;
+      // Capture vignette ID in local scope to avoid closure issues
+      const vignetteId = item.vignette.id;
+      const sliderKey = `slider_value_${vignetteId}`;
+      const justificationKey = `justification_${vignetteId}`;
+
+      // Initialize window storage for this specific vignette
       (window as any)[sliderKey] = 50;
       (window as any)[justificationKey] = "";
 
@@ -282,7 +285,11 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
         type: jsPsychHtmlButtonResponse,
         stimulus: sliderSection,
         choices: ["Weiter"],
-        on_load: () => {
+        on_load: function () {
+          // Re-construct keys inside callback to ensure correct closure
+          const currentSliderKey = `slider_value_${vignetteId}`;
+          const currentJustificationKey = `justification_${vignetteId}`;
+
           const slider = document.getElementById(
             "negligence-slider",
           ) as HTMLInputElement;
@@ -296,7 +303,7 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
           // Capture slider value on any change
           if (slider) {
             const updateSliderValue = () => {
-              (window as any)[sliderKey] = parseInt(slider.value, 10);
+              (window as any)[currentSliderKey] = parseInt(slider.value, 10);
             };
             slider.addEventListener("input", updateSliderValue);
             slider.addEventListener("change", updateSliderValue);
@@ -307,7 +314,7 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
           // Capture justification on any change
           if (justificationInput) {
             justificationInput.addEventListener("input", () => {
-              (window as any)[justificationKey] =
+              (window as any)[currentJustificationKey] =
                 justificationInput.value.trim();
             });
           }
@@ -337,13 +344,17 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
             }
           }
         },
-        on_finish: (data: any) => {
+        on_finish: function (data: any) {
+          // Re-construct keys inside callback to ensure correct closure
+          const currentSliderKey = `slider_value_${vignetteId}`;
+          const currentJustificationKey = `justification_${vignetteId}`;
+
           // Read from window - this persists after DOM is removed
-          data.negligence_slider = (window as any)[sliderKey];
-          data.justification = (window as any)[justificationKey];
+          data.negligence_slider = (window as any)[currentSliderKey];
+          data.justification = (window as any)[currentJustificationKey];
           // Clean up
-          delete (window as any)[sliderKey];
-          delete (window as any)[justificationKey];
+          delete (window as any)[currentSliderKey];
+          delete (window as any)[currentJustificationKey];
         },
         data: {
           vignette_id: item.vignette.id,
