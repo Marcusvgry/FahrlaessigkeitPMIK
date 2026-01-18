@@ -289,10 +289,14 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
           // Re-construct keys inside callback to ensure correct closure
           const currentSliderKey = `slider_value_${vignetteId}`;
           const currentJustificationKey = `justification_${vignetteId}`;
+          
+          console.log("[DEBUG] on_load called for vignette:", vignetteId, "sliderKey:", currentSliderKey);
 
           const slider = document.getElementById(
             "negligence-slider",
           ) as HTMLInputElement;
+          
+          console.log("[DEBUG] slider element found:", !!slider, slider?.value);
           const button = document.querySelector(
             "#jspsych-html-button-response-btngroup button",
           ) as HTMLButtonElement;
@@ -303,12 +307,19 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
           // Capture slider value on any change
           if (slider) {
             const updateSliderValue = () => {
-              (window as any)[currentSliderKey] = parseInt(slider.value, 10);
+              const val = parseInt(slider.value, 10);
+              (window as any)[currentSliderKey] = val;
+              console.log("[DEBUG] slider value updated:", val, "stored at:", currentSliderKey);
             };
             slider.addEventListener("input", updateSliderValue);
             slider.addEventListener("change", updateSliderValue);
             slider.addEventListener("mouseup", updateSliderValue);
             slider.addEventListener("touchend", updateSliderValue);
+            
+            // Initial value capture
+            updateSliderValue();
+          } else {
+            console.error("[DEBUG] slider NOT found!");
           }
 
           // Capture justification on any change
@@ -349,9 +360,16 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
           const currentSliderKey = `slider_value_${vignetteId}`;
           const currentJustificationKey = `justification_${vignetteId}`;
 
+          console.log("[DEBUG] on_finish called for vignette:", vignetteId);
+          console.log("[DEBUG] window keys:", Object.keys(window).filter(k => k.startsWith("slider_") || k.startsWith("justification_")));
+          console.log("[DEBUG] reading from key:", currentSliderKey, "value:", (window as any)[currentSliderKey]);
+          
           // Read from window - this persists after DOM is removed
           data.negligence_slider = (window as any)[currentSliderKey];
           data.justification = (window as any)[currentJustificationKey];
+          
+          console.log("[DEBUG] data.negligence_slider set to:", data.negligence_slider);
+          
           // Clean up
           delete (window as any)[currentSliderKey];
           delete (window as any)[currentJustificationKey];
