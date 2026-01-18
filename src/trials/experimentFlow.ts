@@ -1,6 +1,5 @@
 import surveyPlugin from "@jspsych/plugin-survey";
-import jsPsychSurveyLikert from "@jspsych/plugin-survey-likert";
-import jsPsychHtmlSliderResponse from "@jspsych/plugin-html-slider-response";
+import jsPsychHtmlButtonResponse from "@jspsych/plugin-html-button-response";
 import { instructionTexts } from "./instructionTexts";
 import { demographicPagesOne } from "./questionnaires";
 import { shuffle, makeBalancedConditions } from "../experiment/conditions";
@@ -15,6 +14,7 @@ import {
   NEGLIGENCE_ITEMS,
   LIKERT_LABELS_1_TO_7,
   NEGLIGENCE_SLIDER_PROMPT_HTML,
+  NEGLIGENCE_SLIDER_HTML,
 } from "../trials/questionnaires";
 
 const surveyDefaults = {
@@ -68,42 +68,45 @@ function relaxSurveyPages(pages: SurveyPage[]): SurveyPage[] {
   }));
 }
 
+export function makeWelcome() {
+  return {
+    type: jsPsychHtmlButtonResponse,
+    css_classes: "instruction-screen",
+    data: { trial_tag: "welcome" },
+    stimulus: instructionTexts.instruction,
+    choices: ["Weiter"],
+  };
+}
+
+export function makeInformedConsentOne() {
+  return {
+    type: jsPsychHtmlButtonResponse,
+    css_classes: "instruction-screen",
+    data: { trial_tag: "informed_consent_one" },
+    stimulus: instructionTexts.informedConsentOne,
+    choices: ["Weiter"],
+  };
+}
+
+export function makeInformedConsentTwo() {
+  return {
+    type: jsPsychHtmlButtonResponse,
+    css_classes: "instruction-screen",
+    data: { trial_tag: "informed_consent_two" },
+    stimulus: instructionTexts.informedConsentTwo,
+    choices: ["Weiter"],
+  };
+}
+
 export function makeConsentAndScreening(options: FlowOptions = {}) {
   const { devMode = false } = options;
   const surveyJson = {
     ...surveyDefaults,
+    showTitle: false,
     pages: [
       {
-        name: "welcome",
-        title: "Willkommen",
+        name: "consent_checkboxes",
         elements: [
-          {
-            type: "html",
-            name: "welcome_text",
-            html: instructionTexts.instruction,
-          },
-        ],
-      },
-      {
-        name: "informed_consent_one",
-        title: "Informationen zur Studienteilnahme",
-        elements: [
-          {
-            type: "html",
-            name: "informed_consent_one",
-            html: instructionTexts.informedConsentOne,
-          },
-        ],
-      },
-      {
-        name: "informed_consent_two",
-        title: "Informationen zur Studienteilnahme",
-        elements: [
-          {
-            type: "html",
-            name: "benefits",
-            html: instructionTexts.informedConsentTwo,
-          },
           {
             type: "radiogroup",
             name: "juristicalBackground",
@@ -145,9 +148,7 @@ export function makeConsentAndScreening(options: FlowOptions = {}) {
   return {
     type: surveyPlugin,
     data: { trial_tag: "consent_screening" },
-
     survey_json,
-
     on_finish: (data: any) => {
       if (devMode) {
         data.screen_failed = false;
@@ -191,29 +192,21 @@ export function makeDemographicsSurvey(options: FlowOptions = {}) {
 
 export function makeStudyInstruction() {
   return {
-    type: surveyPlugin,
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `${instructionTexts.instructionsStudy}`,
+    choices: ["Weiter"],
     data: { block: "instructions" },
-    survey_json: {
-      ...surveyDefaults,
-      title: "Instruktionen",
-      pages: [
-        {
-          name: "study_overview",
-          elements: [
-            {
-              type: "html",
-              name: "study_flow",
-              html: instructionTexts.instructionsStudy,
-            },
-          ],
-        },
-      ],
-    },
   };
 }
 export function buildVignetteTimeline(options: FlowOptions = {}) {
   const { devMode = false, pilotStudy = false } = options;
-  const randomized = shuffle(vignetteTemplates);
+
+  // Anzahl der Vignetten (alle anzeigen: vignetteTemplates.length)
+  const numberOfVignettes = devMode
+    ? vignetteTemplates.length // Change to only show few vignettes in dev mode
+    : vignetteTemplates.length;
+
+  const randomized = shuffle(vignetteTemplates).slice(0, numberOfVignettes);
   const conditions = makeBalancedConditions(randomized.length);
 
   const paired = randomized.map((v, idx) => ({
@@ -237,117 +230,231 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
       : "";
     const requireMovement = !devMode;
 
+    const likertElements = NEGLIGENCE_ITEMS.map((statement, index) => ({
+      type: "rating",
+      name: `likert_${index}`,
+      title: statement,
+      rateMin: 1,
+      rateMax: 7,
+      minRateDescription: "trifft überhaupt nicht zu",
+      maxRateDescription: "trifft vollständig zu",
+      isRequired: !devMode,
+    }));
+
     const questions = NEGLIGENCE_ITEMS.map((statement) => ({
       prompt: `<p style="margin-top: 1rem;">${statement}</p>`,
       labels: LIKERT_LABELS_1_TO_7,
       required: !devMode,
     }));
 
+    // Build the slider section
+    const sliderSection =
+      NEGLIGENCE_SLIDER_PROMPT_HTML +
+      NEGLIGENCE_SLIDER_HTML +
+      justificationHtml;
+
     let justificationText = "";
-    timeline.push(
-      {
-        type: jsPsychSurveyLikert,
-        preamble: stim + VIGNETTE_INTRO_HTML,
-        questions,
-        randomize_question_order: false,
-        button_label: "Weiter",
-        data: {
-          vignette_id: item.vignette.id,
-          domain: item.vignette.domain,
-          offloading: item.cond.offloading,
-          consequences: item.cond.consequences,
-          version: `${item.cond.offloading}_${item.cond.consequences}`,
-          measure: "likert_5",
-        },
+
+    // First trial: Show vignette on separate page
+    timeline.push({
+      type: jsPsychHtmlButtonResponse,
+      stimulus: stim,
+      choices: ["Weiter zur Bewertung"],
+      data: {
+        vignette_id: item.vignette.id,
+        domain: item.vignette.domain,
+        offloading: item.cond.offloading,
+        consequences: item.cond.consequences,
+        version: `${item.cond.offloading}_${item.cond.consequences}`,
+        measure: "vignette_display",
       },
-      {
-        type: jsPsychHtmlSliderResponse,
-        stimulus: stim + NEGLIGENCE_SLIDER_PROMPT_HTML + justificationHtml,
-        min: 0,
-        max: 100,
-        step: 1,
-        slider_start: 50,
-        require_movement: requireMovement,
-        button_label: "Weiter",
-        labels: ["0", "100"],
-        on_load: pilotStudy
-          ? () => {
-              const input = document.querySelector<HTMLTextAreaElement>(
-                `#${justificationId}`
-              );
-              const button = document.querySelector<HTMLButtonElement>(
-                "#jspsych-html-slider-response-next"
-              );
-              const slider = document.querySelector<HTMLInputElement>(
-                "#jspsych-html-slider-response-response"
-              );
+    });
 
-              if (!input || !button || !slider) {
-                return;
-              }
+    // Pilot study: Only show slider + justification (no Likert questions)
+    if (pilotStudy) {
+      // Use window to store values - ensures they persist after DOM is removed
+      const sliderKey = `slider_value_${item.vignette.id}`;
+      const justificationKey = `justification_${item.vignette.id}`;
+      (window as any)[sliderKey] = 50;
+      (window as any)[justificationKey] = "";
 
-              const requireJustification = pilotStudy && !devMode;
-              let sliderMoved = !requireMovement;
+      timeline.push({
+        type: jsPsychHtmlButtonResponse,
+        stimulus: sliderSection,
+        choices: ["Weiter"],
+        on_load: () => {
+          const slider = document.getElementById(
+            "negligence-slider",
+          ) as HTMLInputElement;
+          const button = document.querySelector(
+            "#jspsych-html-button-response-btngroup button",
+          ) as HTMLButtonElement;
+          const justificationInput = document.getElementById(
+            justificationId,
+          ) as HTMLTextAreaElement;
 
-              const readJustification = () => {
-                justificationText = input.value.trim();
-                return justificationText.length > 0;
-              };
+          // Capture slider value on any change
+          if (slider) {
+            const updateSliderValue = () => {
+              (window as any)[sliderKey] = parseInt(slider.value, 10);
+            };
+            slider.addEventListener("input", updateSliderValue);
+            slider.addEventListener("change", updateSliderValue);
+            slider.addEventListener("mouseup", updateSliderValue);
+            slider.addEventListener("touchend", updateSliderValue);
+          }
 
-              const updateButtonState = () => {
-                if (!requireJustification) {
-                  readJustification();
-                  return;
-                }
-                const hasText = readJustification();
-                button.disabled = !(sliderMoved && hasText);
-              };
+          // Capture justification on any change
+          if (justificationInput) {
+            justificationInput.addEventListener("input", () => {
+              (window as any)[justificationKey] =
+                justificationInput.value.trim();
+            });
+          }
 
-              if (requireJustification) {
-                button.disabled = true;
-              }
+          if (requireMovement && slider && button) {
+            let sliderMoved = false;
+            button.disabled = true;
 
-              const markSliderMoved = () => {
-                sliderMoved = true;
-                updateButtonState();
-              };
+            const updateButtonState = () => {
+              const hasJustification =
+                !justificationInput ||
+                justificationInput.value.trim().length > 0;
+              button.disabled = !(sliderMoved && (devMode || hasJustification));
+            };
 
-              slider.addEventListener("mousedown", markSliderMoved);
-              slider.addEventListener("touchstart", markSliderMoved);
-              slider.addEventListener("change", markSliderMoved);
-              input.addEventListener("input", updateButtonState);
-
-              button.addEventListener(
-                "click",
-                (event) => {
-                  const hasText = readJustification();
-                  if (requireJustification && !hasText) {
-                    event.preventDefault();
-                    event.stopImmediatePropagation();
-                    button.disabled = true;
-                  }
-                },
-                true
-              );
-
+            const markSliderMoved = () => {
+              sliderMoved = true;
               updateButtonState();
+            };
+
+            slider.addEventListener("mousedown", markSliderMoved);
+            slider.addEventListener("touchstart", markSliderMoved);
+            slider.addEventListener("change", markSliderMoved);
+
+            if (justificationInput) {
+              justificationInput.addEventListener("input", updateButtonState);
             }
-          : undefined,
-        on_finish: pilotStudy
-          ? (data: any) => {
-              data.justification = justificationText;
-            }
-          : undefined,
+          }
+        },
+        on_finish: (data: any) => {
+          // Read from window - this persists after DOM is removed
+          data.negligence_slider = (window as any)[sliderKey];
+          data.justification = (window as any)[justificationKey];
+          // Clean up
+          delete (window as any)[sliderKey];
+          delete (window as any)[justificationKey];
+        },
         data: {
           vignette_id: item.vignette.id,
           domain: item.vignette.domain,
           offloading: item.cond.offloading,
           consequences: item.cond.consequences,
           version: `${item.cond.offloading}_${item.cond.consequences}`,
-          measure: "negligence_slider",
+          measure: "vignette_rating_pilot",
         },
-      }
-    );
+      });
+    } else {
+      // Normal study: Show Likert questions + Slider using SurveyJS
+      // Use window to store slider value - ensures it persists across callbacks
+      const sliderKey = `slider_value_${item.vignette.id}`;
+      (window as any)[sliderKey] = 50;
+
+      timeline.push({
+        type: surveyPlugin,
+        survey_json: {
+          showQuestionNumbers: false,
+          completeText: "Weiter",
+          pages: [
+            {
+              elements: [
+                {
+                  type: "html",
+                  name: "intro",
+                  html: VIGNETTE_INTRO_HTML,
+                },
+                ...likertElements,
+                {
+                  type: "html",
+                  name: "slider_section",
+                  html: sliderSection,
+                },
+              ],
+            },
+          ],
+        },
+        on_load: () => {
+          // Handle slider movement requirement
+          const checkSlider = setInterval(() => {
+            const slider = document.getElementById(
+              "negligence-slider",
+            ) as HTMLInputElement;
+
+            if (slider) {
+              clearInterval(checkSlider);
+
+              // Capture slider value on any change - store in window
+              const updateSliderValue = () => {
+                (window as any)[sliderKey] = parseInt(slider.value, 10);
+              };
+
+              slider.addEventListener("input", updateSliderValue);
+              slider.addEventListener("change", updateSliderValue);
+              slider.addEventListener("mouseup", updateSliderValue);
+              slider.addEventListener("touchend", updateSliderValue);
+
+              if (requireMovement) {
+                // Find complete button with multiple possible selectors
+                const completeBtn = document.querySelector(
+                  '.sd-btn--action, .sd-navigation__complete-btn, input[type="button"][value="Weiter"], button[type="submit"]',
+                ) as HTMLButtonElement;
+
+                if (completeBtn) {
+                  let sliderMoved = false;
+
+                  const markSliderMoved = () => {
+                    sliderMoved = true;
+                    updateSliderValue();
+                  };
+
+                  slider.addEventListener("mousedown", markSliderMoved);
+                  slider.addEventListener("touchstart", markSliderMoved);
+
+                  completeBtn.addEventListener(
+                    "click",
+                    (event) => {
+                      // Capture final value before validation
+                      updateSliderValue();
+                      if (!sliderMoved) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        alert("Bitte bewegen Sie den Slider, um fortzufahren.");
+                      }
+                    },
+                    true,
+                  );
+                }
+              }
+            }
+          }, 100);
+        },
+        on_finish: (data: any) => {
+          // Read from window - this persists after DOM is removed
+          const finalValue = (window as any)[sliderKey];
+          data.response.negligence_slider = finalValue;
+          // Clean up
+          delete (window as any)[sliderKey];
+        },
+        data: {
+          vignette_id: item.vignette.id,
+          domain: item.vignette.domain,
+          offloading: item.cond.offloading,
+          consequences: item.cond.consequences,
+          version: `${item.cond.offloading}_${item.cond.consequences}`,
+          measure: "vignette_rating",
+        },
+      });
+    }
   }
 
   return timeline;
@@ -355,23 +462,24 @@ export function buildVignetteTimeline(options: FlowOptions = {}) {
 
 export function makeScreenOutMessage() {
   return {
-    type: surveyPlugin,
+    type: jsPsychHtmlButtonResponse,
+    stimulus:
+      '<div class="instructions"><p>Vielen Dank für Ihr Interesse. Leider können Sie an dieser Studie nicht teilnehmen, da sie juristische Vorkenntnisse besitzen.</p></div>',
+    choices: ["Schließen"],
     data: { block: "screen_out" },
-    survey_json: {
-      ...surveyDefaults,
-      completeText: "Schließen",
-      pages: [
-        {
-          name: "screen_out",
-          elements: [
-            {
-              type: "html",
-              name: "screen_out_text",
-              html: '<div class="instructions"><p>Vielen Dank für Ihr Interesse. Leider können Sie an dieser Studie nicht teilnehmen, da sie juristische Vorkenntnisse besitzen.</p></div>',
-            },
-          ],
-        },
-      ],
-    },
+  };
+}
+
+export function makeDevModeSelector() {
+  return {
+    type: jsPsychHtmlButtonResponse,
+    css_classes: "instruction-screen",
+    stimulus: `
+      <div class="instructions">
+        <h2>Studienauswahl</h2>
+      </div>
+    `,
+    choices: ["Normale Studie", "Pilotstudie"],
+    data: { block: "dev_mode_selector" },
   };
 }

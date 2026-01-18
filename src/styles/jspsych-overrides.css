@@ -1,6 +1,39 @@
-/* Platzhalter für projektspezifische jsPsych-Anpassungen. */
+.sd-question__required-text {
+  display: none !important;
+}
 
-/* SurveyJS navigation buttons */
+/* Center instruction-only button-response trials */
+.jspsych-display-element.instruction-screen {
+  height: 100vh;
+  justify-content: center;
+}
+
+.jspsych-display-element.instruction-screen .jspsych-content-wrapper {
+  flex: 0 1 auto;
+  margin: 0 auto;
+  align-items: center;
+}
+
+.jspsych-display-element.instruction-screen .jspsych-content {
+  width: 100%;
+}
+
+/* Vertikale Zentrierung für alle jsPsych-Inhalte */
+.jspsych-display-element {
+  min-height: 100vh;
+  justify-content: center !important;
+}
+
+.jspsych-content-wrapper {
+  flex: 0 1 auto !important;
+  align-items: center !important;
+}
+
+/* SurveyJS Page-Titel horizontal zentrieren */
+.sd-page .sd-page__title {
+  text-align: center !important;
+}
+
 .sd-body__navigation .sd-btn,
 .sd-navigation__next-btn,
 .sd-navigation__prev-btn,

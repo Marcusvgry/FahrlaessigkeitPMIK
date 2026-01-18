@@ -1,5 +1,5 @@
 export const experimentConfig = {
   debug: false,
   dataEndpoint: '/experiment-data',
-  prolificRedirectUrl: ''
+  prolificRedirectUrl: 'https://app.prolific.com/submissions/complete?cc=XXXXXXXX'
 };
